@@ -1,0 +1,75 @@
+[
+    {
+        "key": "urlSoap",
+        "type": "input",
+        "defaultValue": "",
+        "templateOptions": {
+            "label": "SOAP web service URL",
+            "placeholder": "https://<root url>/soap/InvokableUserManagement/IinvUserManagement",
+            "required": true
+        }
+    }, 
+    {
+      "key": "certificateSoap",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+          "label": "SOAP SSL certificate (cer)",
+          "placeholder": "C:\\ProgramData\\Tools4ever\\HelloID\\Provisioning\\mijncaress\\Certificaat.cer",
+          "required": true
+      }
+    },  
+    {
+      "key": "wsdlFileSoap",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+          "label": "SOAP wsdl file location",
+          "placeholder": "C:\\ProgramData\\Tools4ever\\HelloID\\Provisioning\\mijncaress\\IinvUserManagementservice.wsdl",
+          "required": true
+      }
+    },     
+    {
+        "key": "usernameSoap",
+        "type": "input",
+        "defaultValue": "",
+        "templateOptions": {
+            "label": "User name (soap)",
+            "placeholder": "Please enter user name",
+            "required": true
+        }
+    },
+      {
+        "key": "passwordSoap",
+        "type": "input",
+        "defaultValue": "",
+        "templateOptions": {
+          "label": "Password (soap)",
+          "type": "password",
+          "placeholder": "Please enter a password",
+          "required": true
+        }
+      },
+      {
+        "key": "proxyAddress",
+        "type": "input",
+        "defaultValue": "",
+        "templateOptions": {
+            "label": "Proxy address",
+            "placeholder": "http://localhost:8888",
+            "required": false
+        }
+    },
+    {
+      "key": "Encryptionkey",
+      "type": "input",
+      "defaultValue": "",
+      "templateOptions": {
+        "label": "Encryption key",
+        "description": "Used for encrypting the passwords of user accounts created/updated by HelloID",
+        "type": "password",
+        "placeholder": "Please enter the Encryption key",
+        "required": true
+      }
+    }
+  ]
