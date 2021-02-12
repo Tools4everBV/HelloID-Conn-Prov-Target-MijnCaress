@@ -1,4 +1,5 @@
 ## HelloID-Conn-Prov-Target-MijnCaress
+This connector is still a work in progress
 
 # functional description
 
