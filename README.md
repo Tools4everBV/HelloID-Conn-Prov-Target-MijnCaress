@@ -63,6 +63,5 @@ Grants the entitlement to all user accounts of the user
 
 Change the first line in the script to  $action = "Revoke"  to change it in a revoke script
 
-
-
-
+# HelloID Docs
+The official HelloID documentation can be found at: https://docs.helloid.com/
