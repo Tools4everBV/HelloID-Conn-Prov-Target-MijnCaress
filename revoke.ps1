@@ -1,5 +1,5 @@
 #####################################################
-# HelloID-Conn-Prov-Target-MijnCaress-Entitlement-Grant
+# HelloID-Conn-Prov-Target-MijnCaress-Entitlement-Revoke
 #
 # Version: 1.0.0
 #####################################################
@@ -24,7 +24,7 @@ try {
     # Add an auditMessage showing what will happen during enforcement
     if ($dryRun -eq $true) {
         $auditLogs.Add([PSCustomObject]@{
-                Message = "Grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)], will be executed during enforcement"
+                Message = "Revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)], will be executed during enforcement"
             })
     }
     Write-Verbose "Setup connection with MijnCaress [$($config.wsdlFileSoap)]"
@@ -51,22 +51,32 @@ try {
     }
 
     if (-not($dryRun -eq $true)) {
-        Write-Verbose "Granting MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)]"
-
+        Write-Verbose "Revoking MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)]"
         [MijnCaress.TremUserUserGroup] $memberschip = [MijnCaress.TremUserUserGroup]::new()
         $memberschip.UserSysId = $aRef
         $memberschip.UsergroupSysId = $pRef.Reference
-        $null = $CaressService.SetUserGroup($memberschip)
+
+        try {
+            $null = $CaressService.RemoveUsergroup($memberschip)
+        } catch {
+            if ($_.Exception.Message -match 'Response is not well-formed XML.') {
+                # This might be encountered due to a bug in the WSDL, the error message in Postman is correct.
+                Write-Verbose 'Er zijn geen overeenkomstige gegevens aanwezig bij UserSysId & UsergroupSysId'
+                Write-Verbose "Usergroup Allready $($memberschip.UsergroupSysId) removed from user $($memberschip.UserSysId)" -Verbose
+            }
+            throw $_
+        }
+
         $success = $true
         $auditLogs.Add([PSCustomObject]@{
-                Message = "Grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)] was successful."
+                Message = "Revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)] was successful."
                 IsError = $false
             })
     }
 } catch {
     $success = $false
     $ex = $PSItem
-    $errorMessage = "Could not grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
+    $errorMessage = "Could not revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
 
     Write-Verbose $errorMessage -Verbose
     $auditLogs.Add([PSCustomObject]@{

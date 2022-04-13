@@ -1,5 +1,5 @@
 #####################################################
-# HelloID-Conn-Prov-Target-MijnCaress-Entitlement-Grant
+# HelloID-Conn-Prov-Target-MijnCaress-Delete
 #
 # Version: 1.0.0
 #####################################################
@@ -7,7 +7,6 @@
 $config = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
 $aRef = $AccountReference | ConvertFrom-Json
-$pRef = $permissionReference | ConvertFrom-Json
 $success = $false
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
 
@@ -20,11 +19,19 @@ switch ($($config.IsDebug)) {
     $false { $VerbosePreference = 'SilentlyContinue' }
 }
 
+# Account mapping
+$account = [PSCustomObject]@{
+    SysId  = $aRef           #  $null for new account instead of update
+    Status = 'N'                                # "A" = Active, "N" = Not active
+    End    = (Get-Date).AddDays(-1).ToString('yyyy-MM-dd')
+}
+
+
 try {
     # Add an auditMessage showing what will happen during enforcement
     if ($dryRun -eq $true) {
         $auditLogs.Add([PSCustomObject]@{
-                Message = "Grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)], will be executed during enforcement"
+                Message = "Delete MijnCaress account from: [$($p.DisplayName)], will be executed during enforcement"
             })
     }
     Write-Verbose "Setup connection with MijnCaress [$($config.wsdlFileSoap)]"
@@ -35,6 +42,7 @@ try {
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
     $certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
     $null = $caressService.ClientCertificates.Add($certificate)
+
 
     if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
         $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
@@ -51,22 +59,25 @@ try {
     }
 
     if (-not($dryRun -eq $true)) {
-        Write-Verbose "Granting MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)]"
+        [MijnCaress.TremSetUser] $newUser = [MijnCaress.TremSetUser]::new()
+        $newUser.SysId = $aRef
+        $newUser.Status = $account.Status
+        $newUser.End = $account.End
+        $newUser.MustChangePass = "F" # Is always required in API! ?
 
-        [MijnCaress.TremUserUserGroup] $memberschip = [MijnCaress.TremUserUserGroup]::new()
-        $memberschip.UserSysId = $aRef
-        $memberschip.UsergroupSysId = $pRef.Reference
-        $null = $CaressService.SetUserGroup($memberschip)
+        Write-Verbose "Deleting MijnCaress account: [$aRef] from: [$($p.DisplayName)]"
+        $null = $caressService.SetUser($newUser)
+
         $success = $true
         $auditLogs.Add([PSCustomObject]@{
-                Message = "Grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)] was successful."
+                Message = "Delete account for: [$($p.DisplayName)] was successful."
                 IsError = $false
             })
     }
 } catch {
     $success = $false
     $ex = $PSItem
-    $errorMessage = "Could not grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
+    $errorMessage = "Could not delete MijnCaress account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
 
     Write-Verbose $errorMessage -Verbose
     $auditLogs.Add([PSCustomObject]@{

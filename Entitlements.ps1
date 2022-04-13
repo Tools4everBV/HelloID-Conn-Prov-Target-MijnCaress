@@ -1,63 +1,40 @@
-$config = ConvertFrom-Json $configuration
+$config = $configuration | ConvertFrom-Json
 
+$null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
+$caressService = [MijnCaress.IinvUserManagementservice]::new();
+$caressService.Url = $config.urlSoap
 
-if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
-    [Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
+if ( -not [string]::IsNullOrEmpty($Config.CertificateSoap)) {
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
+    $certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
+    $null = $caressService.ClientCertificates.Add($certificate)
+}
+# Proxy needs a certificate to make it work
+if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
+    $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
+}
+$authToken = $CaressService.CreateSession($config.UsernameSoap, $config.PasswordSoap)
+
+if ($authToken) {
+    $auth = [MijnCaress.AuthHeader]::New()
+    $auth.sSessionId = $authToken;
+    $auth.sUserName = $config.UsernameSoap;
+    $caressService.AuthHeaderValue = $auth
+} else {
+    throw "Could not retrieve authentication token from [$($caressService.Url)] for user [$($config.UsernameSoap)]"
 }
 
-try {
-    #serviceProxy = New-WebServiceProxy -uri $config.UrlSoap  -NameSpace "MijnCaress"
-    $serviceProxy = New-WebServiceProxy -uri $config.wsdlFileSoap  -NameSpace "MijnCaress"
+$permissions = $caressService.getuserGroups()
 
-    $caressService = [MijnCaress.IinvUserManagementservice]::new();
-    $caressService.Url = $config.urlSoap
-
-    if (![string]::IsNullOrEmpty($Config.ProxyAddress)) {
-        $caressService.Proxy = [System.Net.WebProxy]::new($config.ProxyAddress);
-    }     
-
-    if (![string]::IsNullOrEmpty($Config.CertificateSoap)){
-        [System.Security.Cryptography.X509Certificates.X509Certificate] $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate]::CreateFromCertFile($Config.CertificateSoap);
-        $null = $caressService.ClientCertificates.Add($certificate);
-    }
-
-    [string] $authToken = $CaressService.CreateSession($config.UsernameSoap,$config.PasswordSoap) 
-    
-    if (![string]::IsNullOrEmpty($authToken)){
-
-        [MijnCaress.AuthHeader] $auth =  [MijnCaress.AuthHeader]::new()
-        $auth.sSessionId = $authToken;
-        $auth.sUserName = $config.UsernameSoap;     
-        $caressService.AuthHeaderValue = $auth              
-    }
-    else {  
-        $message = "Could not retreive authentication token from $($caressService.Url)  for user $($config.UsernameSoap)";      
-        throw ($message)           
-    } 
-
-    if(-Not($dR -eq $true)) {
-        [MijnCaress.TremUserGroup[]] $userGroups = $caressService.getuserGroups()        
-    }
-}
-finally{
-    $CaressService.DestroySession();
-}
-
-$permissions = [System.Collections.Generic.List[psobject]]::new()
-foreach ($g in $userGroups) {
-    $permission = @{
-        DisplayName    = $g.name
+$permissions | % { $_ | Add-Member -NotePropertyMembers  @{
+        DisplayName    = $_.Name
         Identification = @{
-            Name = $g.name
-            SysId = $g.SysId
-            Type = $g.Type
+            Reference = $_.SysId
         }
     }
-    $permissions.add( $permission )
-}   
+}
 
-Write-Output ($permissions | ConvertTo-Json)
+Write-Output $permissions |ConvertTo-Json -Depth 10
 
 
-    
-    
+
