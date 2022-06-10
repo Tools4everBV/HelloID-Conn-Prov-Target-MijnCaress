@@ -1,0 +1,391 @@
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="https://laurens-bqaaccp.mijncaress.nl:24835/soap" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:ns1="urn:InvokableUserManagement" xmlns:ns2="urn:libCCInvocableApplication" name="IinvUserManagementservice" targetNamespace="https://laurens-bqaaccp.mijncaress.nl:24835/soap">
+	<types>
+		<xs:schema targetNamespace="urn:InvokableUserManagement">
+			<xs:complexType name="TremUserGroups">
+				<xs:complexContent>
+					<xs:restriction base="soapenc:Array">
+						<sequence xmlns="http://www.w3.org/2001/XMLSchema"/>
+						<xs:attribute xmlns:n1="http://schemas.xmlsoap.org/wsdl/" ref="soapenc:arrayType" n1:arrayType="ns1:TremUserGroup[]"/>
+					</xs:restriction>
+				</xs:complexContent>
+			</xs:complexType>
+			<xs:complexType name="TremUserGroup">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:int"/>
+					<xs:element name="Name" type="xs:string"/>
+					<xs:element name="Type" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremDisciplines">
+				<xs:complexContent>
+					<xs:restriction base="soapenc:Array">
+						<sequence xmlns="http://www.w3.org/2001/XMLSchema"/>
+						<xs:attribute xmlns:n1="http://schemas.xmlsoap.org/wsdl/" ref="soapenc:arrayType" n1:arrayType="ns1:TremDiscipline[]"/>
+					</xs:restriction>
+				</xs:complexContent>
+			</xs:complexType>
+			<xs:complexType name="TremDiscipline">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:int"/>
+					<xs:element name="Name" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremEmployees">
+				<xs:complexContent>
+					<xs:restriction base="soapenc:Array">
+						<sequence xmlns="http://www.w3.org/2001/XMLSchema"/>
+						<xs:attribute xmlns:n1="http://schemas.xmlsoap.org/wsdl/" ref="soapenc:arrayType" n1:arrayType="ns1:TremEmployee[]"/>
+					</xs:restriction>
+				</xs:complexContent>
+			</xs:complexType>
+			<xs:complexType name="TremEmployee">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:string"/>
+					<xs:element name="Id" type="xs:string"/>
+					<xs:element name="Name" type="xs:string"/>
+					<xs:element name="Address" type="xs:string"/>
+					<xs:element name="Postalcode" type="xs:string"/>
+					<xs:element name="City" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremUsers">
+				<xs:complexContent>
+					<xs:restriction base="soapenc:Array">
+						<sequence xmlns="http://www.w3.org/2001/XMLSchema"/>
+						<xs:attribute xmlns:n1="http://schemas.xmlsoap.org/wsdl/" ref="soapenc:arrayType" n1:arrayType="ns1:TremUser[]"/>
+					</xs:restriction>
+				</xs:complexContent>
+			</xs:complexType>
+			<xs:complexType name="TremUser">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:int"/>
+					<xs:element name="Username" type="xs:string"/>
+					<xs:element name="Name" type="xs:string"/>
+					<xs:element name="Start" type="xs:string"/>
+					<xs:element name="End" type="xs:string"/>
+					<xs:element name="Status" type="xs:string"/>
+					<xs:element name="AdUsername" type="xs:string"/>
+					<xs:element name="EmployeeSysId" type="xs:string"/>
+					<xs:element name="DisciplineSysId" type="xs:string"/>
+					<xs:element name="Usergroup" type="ns1:TremUserUserGroupSysIds"/>
+					<xs:element name="UPN" type="xs:string"/>
+					<xs:element name="UserType" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremUserUserGroupSysIds">
+				<xs:complexContent>
+					<xs:restriction base="soapenc:Array">
+						<sequence xmlns="http://www.w3.org/2001/XMLSchema"/>
+						<xs:attribute xmlns:n1="http://schemas.xmlsoap.org/wsdl/" ref="soapenc:arrayType" n1:arrayType="ns1:TremUserUserGroupSysId[]"/>
+					</xs:restriction>
+				</xs:complexContent>
+			</xs:complexType>
+			<xs:complexType name="TremUserUserGroupSysId">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:int"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremUserUserGroup">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="UserSysId" type="xs:string"/>
+					<xs:element name="UsergroupSysId" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+			<xs:complexType name="TremSetUser">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="SysId" type="xs:string"/>
+					<xs:element name="Username" type="xs:string"/>
+					<xs:element name="Name" type="xs:string"/>
+					<xs:element name="Start" type="xs:string"/>
+					<xs:element name="End" type="xs:string"/>
+					<xs:element name="Status" type="xs:string"/>
+					<xs:element name="AdUsername" type="xs:string"/>
+					<xs:element name="EmployeeSysId" type="xs:string"/>
+					<xs:element name="DisciplineSysId" type="xs:string"/>
+					<xs:element name="Password" type="xs:string"/>
+					<xs:element name="MustChangePass" type="xs:string"/>
+					<xs:element name="UPN" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+		</xs:schema>
+		<xs:schema targetNamespace="urn:libCCInvocableApplication">
+			<xs:complexType name="AuthHeader">
+				<sequence xmlns="http://www.w3.org/2001/XMLSchema">
+					<xs:element name="sSessionId" type="xs:string"/>
+					<xs:element name="sJWT" type="xs:string"/>
+					<xs:element name="sUserName" type="xs:string"/>
+					<xs:element name="sCheckDatabaseId" type="xs:string"/>
+				</sequence>
+			</xs:complexType>
+		</xs:schema>
+	</types>
+	<message name="CreateSession0Request">
+		<part name="sUserName" type="xs:string"/>
+		<part name="sPassword" type="xs:string"/>
+	</message>
+	<message name="CreateSession0Response">
+		<part name="return" type="xs:string"/>
+	</message>
+	<message name="CreateSession0headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="CreateSession0headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="DestroySession1Request"/>
+	<message name="DestroySession1Response"/>
+	<message name="DestroySession1headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="DestroySession1headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetUserGroups2Request"/>
+	<message name="GetUserGroups2Response">
+		<part name="return" type="ns1:TremUserGroups"/>
+	</message>
+	<message name="GetUserGroups2headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetUserGroups2headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetDisciplines3Request"/>
+	<message name="GetDisciplines3Response">
+		<part name="return" type="ns1:TremDisciplines"/>
+	</message>
+	<message name="GetDisciplines3headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetDisciplines3headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetEmployees4Request"/>
+	<message name="GetEmployees4Response">
+		<part name="return" type="ns1:TremEmployees"/>
+	</message>
+	<message name="GetEmployees4headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetEmployees4headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetEmployeeById5Request">
+		<part name="Id" type="xs:string"/>
+	</message>
+	<message name="GetEmployeeById5Response">
+		<part name="return" type="ns1:TremEmployee"/>
+	</message>
+	<message name="GetEmployeeById5headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetEmployeeById5headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetUsers6Request"/>
+	<message name="GetUsers6Response">
+		<part name="return" type="ns1:TremUsers"/>
+	</message>
+	<message name="GetUsers6headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="GetUsers6headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="SetUsergroup7Request">
+		<part name="oUserUserGroup" type="ns1:TremUserUserGroup"/>
+	</message>
+	<message name="SetUsergroup7Response">
+		<part name="return" type="xs:int"/>
+	</message>
+	<message name="SetUsergroup7headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="SetUsergroup7headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="RemoveUsergroup8Request">
+		<part name="oUserUserGroup" type="ns1:TremUserUserGroup"/>
+	</message>
+	<message name="RemoveUsergroup8Response">
+		<part name="return" type="xs:int"/>
+	</message>
+	<message name="RemoveUsergroup8headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="RemoveUsergroup8headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="SetUser9Request">
+		<part name="oSetUser" type="ns1:TremSetUser"/>
+	</message>
+	<message name="SetUser9Response">
+		<part name="return" type="xs:string"/>
+	</message>
+	<message name="SetUser9headerRequest">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<message name="SetUser9headerResponse">
+		<part name="AuthHeader" type="ns2:AuthHeader"/>
+	</message>
+	<portType name="IinvUserManagement">
+		<operation name="CreateSession">
+			<input message="tns:CreateSession0Request"/>
+			<output message="tns:CreateSession0Response"/>
+		</operation>
+		<operation name="DestroySession">
+			<input message="tns:DestroySession1Request"/>
+			<output message="tns:DestroySession1Response"/>
+		</operation>
+		<operation name="GetUserGroups">
+			<input message="tns:GetUserGroups2Request"/>
+			<output message="tns:GetUserGroups2Response"/>
+		</operation>
+		<operation name="GetDisciplines">
+			<input message="tns:GetDisciplines3Request"/>
+			<output message="tns:GetDisciplines3Response"/>
+		</operation>
+		<operation name="GetEmployees">
+			<input message="tns:GetEmployees4Request"/>
+			<output message="tns:GetEmployees4Response"/>
+		</operation>
+		<operation name="GetEmployeeById">
+			<input message="tns:GetEmployeeById5Request"/>
+			<output message="tns:GetEmployeeById5Response"/>
+		</operation>
+		<operation name="GetUsers">
+			<input message="tns:GetUsers6Request"/>
+			<output message="tns:GetUsers6Response"/>
+		</operation>
+		<operation name="SetUsergroup">
+			<input message="tns:SetUsergroup7Request"/>
+			<output message="tns:SetUsergroup7Response"/>
+		</operation>
+		<operation name="RemoveUsergroup">
+			<input message="tns:RemoveUsergroup8Request"/>
+			<output message="tns:RemoveUsergroup8Response"/>
+		</operation>
+		<operation name="SetUser">
+			<input message="tns:SetUser9Request"/>
+			<output message="tns:SetUser9Response"/>
+		</operation>
+	</portType>
+	<binding name="IinvUserManagementbinding" type="tns:IinvUserManagement">
+		<binding xmlns="http://schemas.xmlsoap.org/wsdl/soap/" style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<operation name="CreateSession">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#CreateSession" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:CreateSession0headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:CreateSession0headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="DestroySession">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#DestroySession" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:DestroySession1headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:DestroySession1headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="GetUserGroups">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#GetUserGroups" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetUserGroups2headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetUserGroups2headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="GetDisciplines">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#GetDisciplines" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetDisciplines3headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetDisciplines3headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="GetEmployees">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#GetEmployees" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetEmployees4headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetEmployees4headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="GetEmployeeById">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#GetEmployeeById" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetEmployeeById5headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetEmployeeById5headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="GetUsers">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#GetUsers" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetUsers6headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:GetUsers6headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="SetUsergroup">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#SetUsergroup" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:SetUsergroup7headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:SetUsergroup7headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="RemoveUsergroup">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#RemoveUsergroup" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:RemoveUsergroup8headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:RemoveUsergroup8headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+		<operation name="SetUser">
+			<operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:InvokableUserManagement-IinvUserManagement#SetUser" style="rpc"/>
+			<input>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:SetUser9headerRequest" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</input>
+			<output>
+				<body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:InvokableUserManagement-IinvUserManagement"/>
+				<header xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="encoded" message="tns:SetUser9headerResponse" part="AuthHeader" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="urn:libCCInvocableApplication"/>
+			</output>
+		</operation>
+	</binding>
+	<service name="IinvUserManagementservice">
+		<port name="IinvUserManagementPort" binding="tns:IinvUserManagementbinding">
+			<address xmlns="http://schemas.xmlsoap.org/wsdl/soap/" location="https://laurens-bqaaccp.mijncaress.nl:24835/soap/IinvUserManagement"/>
+		</port>
+	</service>
+</definitions>

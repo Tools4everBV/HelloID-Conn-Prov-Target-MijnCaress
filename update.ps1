@@ -17,10 +17,9 @@ $account = [PSCustomObject]@{
     Name            = $p.Name.NickName + ' ' + $p.name.FamilyName
     AdUsername      = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
     Username        = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
-    # UPN            = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
+    UPN             = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
     Start           = $p.PrimaryContract.StartDate
     End             = $p.PrimaryContract.Enddate
-    EmployeeId      = $p.externalId
     # Additional Mapping file is required
     DisciplineSysId = $p.PrimaryContract.Title.Name      # A lookup against the mapping file is perfromed later in the code
     MustChangePass  = 'F' # Mandatory
@@ -31,10 +30,9 @@ $previousAccount = [PSCustomObject]@{
     Name            = $pp.Name.NickName + ' ' + $pp.name.FamilyName
     AdUsername      = $pp.Accounts.MicrosoftActiveDirectory.SamAccountName
     Username        = $pp.Accounts.MicrosoftActiveDirectory.SamAccountName
-    # UPN            = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
+    UPN             = $pp.Accounts.MicrosoftActiveDirectory.SamAccountName
     Start           = $pp.PrimaryContract.StartDate
     End             = $pp.PrimaryContract.Enddate
-    EmployeeId      = $p.externalId
     # Additional Mapping file is required
     DisciplineSysId = $pp.PrimaryContract.Title.Name     # Additional Mapping file is needed between function name en MijnCaress disiplineName
     MustChangePass  = 'F'  # Mandatory
@@ -84,22 +82,31 @@ try {
     }
 
     # Only update the changed properties
-    [MijnCaress.TremSetUser] $newUser = [MijnCaress.TremSetUser]::new()
+    [MijnCaress.TremSetUser] $setUser = [MijnCaress.TremSetUser]::new()
     foreach ($property in ($propertiesChanged)) {
-        $newUser."$($property.name)" = $account.$($property.name)
+        $setUser."$($property.name)" = $account.$($property.name)
     }
-    $newUser.SysId = $aRef
-    $newUser.MustChangePass = "F" # Is always required in API! , bug?
+    $setUser.SysId = $aRef
+    $setUser.MustChangePass = "F" # Is always required in API!
 
-    if ($newUser.DisciplineSysId ) {
+    if ($propertiesChanged.name -match 'End') {
+        Write-Verbose "Getting current user accounts from disk [$($config.UserLocationFile)\users.csv]"
+        $userList = Import-Csv -Path "$($config.UserLocationFile)\users.csv"
+        $currectUserObject = $userList.Where({ $_.SysId -eq $aref })
 
+        if (-not [string]::IsNullOrEmpty($currectUserObject.End) -and [string]::IsNullOrEmpty($account.End)) {
+            $setUser.End = '9999-01-01'
+        }
+    }
+
+    if ($setUser.DisciplineSysId ) {
         Write-Verbose "Import CSV Discipline MappingFile [$($config.DisciplineMappingFile)"
         $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' -Header FunctionName, DisciplineName
-        $DisciplineName = ($DisciplineMapping | Where-Object { $_.FunctionName -eq $newUser.DisciplineSysId }).DisciplineName
+        $DisciplineName = ($DisciplineMapping.Where({ $_.FunctionName -eq $setUser.DisciplineSysId })).DisciplineName
         if ($null -eq $DisciplineName) {
-            throw "No Discipline Name found for [$($newUser.DisciplineSysId)]. Please verify your mapping and configuration"
+            throw "No Discipline Name found for [$($setUser.DisciplineSysId)]. Please verify your mapping and configuration"
         }
-        Write-Verbose "mijnCaress Disipline Name [$DisciplineName] found with lookup value [$($newUser.DisciplineSysId)]"
+        Write-Verbose "mijnCaress Disipline Name [$DisciplineName] found with lookup value [$($setUser.DisciplineSysId)]"
 
 
         # List is needed for lookup the ID.
@@ -109,7 +116,7 @@ try {
         if ($null -eq $DisciplineSysId ) {
             throw "No DisiplineSysId is found on Name [$($DisciplineName)]"
         }
-        $newUser.DisciplineSysId = $DisciplineSysId
+        $setUser.DisciplineSysId = $DisciplineSysId
         $account.DisciplineSysId = $DisciplineSysId
     }
 
@@ -123,7 +130,7 @@ try {
 
     if (-not($dryRun -eq $true)) {
         Write-Verbose "Updating mijnCaress account: [$aRef] for: [$($p.DisplayName)]"
-        $null = $caressService.SetUser($newUser)
+        $null = $caressService.SetUser($setUser)
 
         $success = $true
         $auditLogs.Add([PSCustomObject]@{

@@ -8,7 +8,6 @@ $config = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
 $success = $false
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
-$action = 'Create'
 
 # Specitfy the HelloID property to map to a MijnCaress Discipline
 $DisciplineNameLookUpValue = $p.PrimaryContract.Title.Name
@@ -19,7 +18,7 @@ $account = [PSCustomObject]@{
     Name           = $p.Name.NickName + ' ' + $p.name.FamilyName
     AdUsername     = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
     Username       = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
-    # UPN            = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
+    UPN            = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
     Start          = $p.PrimaryContract.StartDate       # "YYYY-MM-dd"
     End            = $p.PrimaryContract.Enddate         # "YYYY-MM-dd"
     Status         = 'N'                                # "A" = Active, "N" = Not active
@@ -37,6 +36,9 @@ switch ($($config.IsDebug)) {
     $true { $VerbosePreference = 'Continue' }
     $false { $VerbosePreference = 'SilentlyContinue' }
 }
+
+# Set to true if accounts in the target system must be updated
+$updatePerson = $true
 
 #region functions
 function New-DES {
@@ -78,6 +80,8 @@ try {
     $DisciplineName = ($DisciplineMapping | Where-Object { $_.FunctionName -eq $DisciplineNameLookUpValue }).DisciplineName
     if ($null -eq $DisciplineName) {
         throw "No Discipline Name found for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
+    } elseif ( $DisciplineName.count -gt 1) {
+        throw "Multiple Discipline names found [$($DisciplineName -join ', ')] for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
     }
     $account.DisciplineName = $DisciplineName
 
@@ -109,24 +113,29 @@ try {
     $DisciplineList = $caressService.GetDisciplines()
 
     # Verify if a user must be created or correlated
-    Write-Verbose "Getting All user accounts from disk [$($config.UserLocationFile)"
-    $userList = Import-Csv -Path $config.UserLocationFile
+    Write-Verbose "Getting All user accounts from disk [$($config.UserLocationFile)\users.csv]"
+    $userList = Import-Csv -Path "$($config.UserLocationFile)\users.csv"
 
     $employee = $caressService.GetEmployeeById($account.EmployeeId) # throws error if employee not found
     if ($employee) {
-        Write-Verbose "Found employee Name: [$($employee.name)] Id: [$($employee.Id)]"
+        Write-Verbose "Found employee Name: [$($employee.Name)] Id: [$($employee.Id)]"
     }
-    $useraccountsFoundOnEmployeeID = $userList | Where-Object { $_.EmployeeSysId -eq $employee.SysId }
+    [array]$useraccountsFoundOnEmployeeID = $userList.Where({ $_.EmployeeSysId -eq $employee.SysId })
     Write-Verbose "Found [$($useraccountsFoundOnEmployeeID.Count)] users account for employee [$($employee.Id)], account(s) [$($useraccountsFoundOnEmployeeID.Username -join ", ")]"
 
-    $useraccountsOndifferentEmployeeID = $userList | Where-Object { $_.username -eq $account.Username -and $_.EmployeeSysId -ne $employee.SysId }
+    $useraccountsOndifferentEmployeeID = $userList.Where({ $_.username -eq $account.Username -and $_.EmployeeSysId -ne $employee.SysId })
     if ($useraccountsOndifferentEmployeeID ) {
         throw "Account with username $($account.Username) allready exist on a different Employee [$($useraccountsOndifferentEmployeeID.EmployeeSysId)]"
     }
 
-    $userAccountFound = $useraccountsFoundOnEmployeeID | Where-Object { $_.username -eq $account.Username }
+    $userAccountFound = $useraccountsFoundOnEmployeeID.Where({ $_.username -eq $account.Username })
     $account.SysId = $userAccountFound.SysId
-    if ($userAccountFound ) {
+
+    if (-not($userAccountFound)) {
+        $action = 'Create'
+    } elseif ($updatePerson -eq $true) {
+        $action = 'Update-Correlate'
+    } else {
         $action = 'Correlate'
     }
 
@@ -142,16 +151,17 @@ try {
         switch ($action) {
             'Create' {
                 Write-Verbose "Creating mijnCaress account for: [$($p.DisplayName)]"
-                [MijnCaress.TremSetUser] $newUser = [MijnCaress.TremSetUser]::new()
+                [MijnCaress.TremSetUser]$newUser = [MijnCaress.TremSetUser]::new()
                 $newUser.SysId = $null
                 $newUser.Username = $account.Username
                 $newUser.Name = $account.Name
                 $newUser.Start = $account.Start
-                $newUser.End = $account.Ends
+                $newUser.End = $account.End
                 $newUser.Status = $account.Status
                 $newUser.AdUsername = $account.AdUsername
                 $newUser.Password = $account.Password
                 $newUser.MustChangePass = $account.MustChangePass
+                $newUser.UPN = $account.UPN
                 $newUser.EmployeeSysId = $employee.SysId
 
                 # Error Controle
@@ -163,6 +173,37 @@ try {
 
                 $createResponse = $caressService.SetUser($newUser)
                 $accountReference = $createResponse
+            }
+
+            'Update-Correlate' {
+                Write-Verbose 'Updating and correlating mijnCaress account'
+                [MijnCaress.TremSetUser]$setUser = [MijnCaress.TremSetUser]::new()
+                $setUser.SysId = $userAccountFound.SysId
+                $setUser.Username = $account.Username
+                $setUser.Name = $account.Name
+                $setUser.Start = $account.Start
+                if (-not [string]::IsNullOrEmpty($userAccountFound.End) -and [string]::IsNullOrEmpty($account.End)) {
+                    $setUser.End = '9999-01-01'
+                } else {
+                    $setUser.End = $account.End
+                }
+                $setUser.Status = $account.Status
+                $setUser.AdUsername = $account.AdUsername
+                $setUser.Password = $account.Password
+                $setUser.MustChangePass = $account.MustChangePass
+                $setUser.UPN = $account.UPN
+                $setUser.EmployeeSysId = $employee.SysId
+
+                # Error Controle
+                $DisciplineSysId = ($DisciplineList | Where-Object { $_.Name -eq $account.DisciplineName }).SysId
+                if ($null -eq $DisciplineSysId ) {
+                    throw "No disiplineSysId found with provided name [$($account.DisciplineName)], make sure you mapping is correct"
+                }
+                $setUser.DisciplineSysId = $DisciplineSysId
+
+                $createResponse = $caressService.SetUser($setUser)
+                $accountReference = $userAccountFound.SysId
+                break
             }
 
             'Correlate' {
