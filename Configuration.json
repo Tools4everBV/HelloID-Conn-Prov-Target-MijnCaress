@@ -89,8 +89,8 @@
     "defaultValue": "",
     "templateOptions": {
       "label": "UsersLocationFile",
-      "description": "Used by the resource Script to store the existing MijnCaress Accounts on disk",
-      "placeholder": "..\\install\\users.csv",
+      "description": "Used by the resource Script to store the existing MijnCaress Accounts and Authorizations on disk",
+      "placeholder": "..\\install\\",
       "required": true
     }
   },

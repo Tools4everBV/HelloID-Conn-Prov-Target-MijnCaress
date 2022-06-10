@@ -61,10 +61,11 @@ try {
         } catch {
             if ($_.Exception.Message -match 'Response is not well-formed XML.') {
                 # This might be encountered due to a bug in the WSDL, the error message in Postman is correct.
-                Write-Verbose 'Er zijn geen overeenkomstige gegevens aanwezig bij UserSysId & UsergroupSysId'
+                Write-Verbose "Er zijn geen overeenkomstige gegevens aanwezig bij UserSysId & UsergroupSysId error: $($_.Exception.Message)"
                 Write-Verbose "Usergroup Allready $($memberschip.UsergroupSysId) removed from user $($memberschip.UserSysId)" -Verbose
+            } else {
+                throw $_
             }
-            throw $_
         }
 
         $success = $true

@@ -53,10 +53,19 @@ try {
     if (-not($dryRun -eq $true)) {
         Write-Verbose "Granting MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)]"
 
-        [MijnCaress.TremUserUserGroup] $memberschip = [MijnCaress.TremUserUserGroup]::new()
-        $memberschip.UserSysId = $aRef
-        $memberschip.UsergroupSysId = $pRef.Reference
-        $null = $CaressService.SetUserGroup($memberschip)
+        Write-Verbose "Getting existing authorization from disk [$($config.UserLocationFile)\authorization.csv]"
+        $authorizationList = Import-Csv -Path "$($config.UserLocationFile)\authorization.csv"
+
+        $allreadyGranted = $authorizationList.Where({ $_.UserSysId -eq $aRef }).Where({ $_.SysId -eq $pRef.Reference })
+
+        if ($allreadyGranted.count -eq 0) {
+            [MijnCaress.TremUserUserGroup] $memberschip = [MijnCaress.TremUserUserGroup]::new()
+            $memberschip.UserSysId = $aRef
+            $memberschip.UsergroupSysId = $pRef.Reference
+            $null = $CaressService.SetUserGroup($memberschip)
+        } else {
+            Write-Verbose "User [$aRef] already granted to group [$($pRef.Reference)]"
+        }
         $success = $true
         $auditLogs.Add([PSCustomObject]@{
                 Message = "Grant MijnCaress entitlement: [$($pRef.Reference)] to: [$($p.DisplayName)] was successful."

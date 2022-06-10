@@ -17,13 +17,18 @@ try {
     $auth.sUserName = $config.UsernameSoap
     $caressService.AuthHeaderValue = $auth
 
-    $success = $true
 
     $users = $caressService.GetUsers()
-    $users | Export-Csv  -Path $config.UserLocationFile  -NoTypeInformation -Encoding UTF8
 
+    $userList = $users | Select-Object * -ExcludeProperty Usergroup
+    $authorizationList = $users | Select-Object @{Name = 'UserSysId'; Expression = { $_.SysId } } -ExpandProperty Usergroup
+
+    $userList | Export-Csv  -Path "$($config.UserLocationFile)\users.csv"  -NoTypeInformation -Encoding UTF8
+    $authorizationList | Export-Csv  -Path "$($config.UserLocationFile)\authorization.csv"  -NoTypeInformation -Encoding UTF8
+
+    $success = $true
     $auditLogs.Add([PSCustomObject]@{
-            Message = "Successfull created user accounts Cache $($config.UserLocationFile)"
+            Message = "Successfull created user and authorization Cache at: [$($config.UserLocationFile)]"
             Action  = 'CreateResource'
             IsError = $false
         })
@@ -31,7 +36,7 @@ try {
 } catch {
     $auditLogs.Add([PSCustomObject]@{
             Message = "Error: $( $_.Exception.Message)"
-            Action  = "CreateResource"
+            Action  = 'CreateResource'
             IsError = $true
         })
 
