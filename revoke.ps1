@@ -27,27 +27,27 @@ try {
                 Message = "Revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)], will be executed during enforcement"
             })
     }
-    Write-Verbose "Setup connection with MijnCaress [$($config.wsdlFileSoap)]"
+    Write-Verbose "Setup connection with mijnCaress [$($config.wsdlFileSoap)]"
     $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
     $caressService = [MijnCaress.IinvUserManagementservice]::new();
-    $caressService.Url = $config.urlSoap
-
+    $caressService.Url = "$($config.urlBase)/soap/InvokableUserManagement/IinvUserManagement"
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
-    $certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
+    $certificate.Import($Config.certificatePath, $config.CertificatePassword, 'UserKeySet')
     $null = $caressService.ClientCertificates.Add($certificate)
 
     if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
         $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
     }
-    $authToken = $CaressService.CreateSession($config.UsernameSoap, $config.PasswordSoap)
+    $authToken = $CaressService.CreateSession($config.UsernameAPI, $config.PasswordAPI)
 
-    if (-not [string]::IsNullOrEmpty($authToken)) {
+    if ($authToken) {
         $auth = [MijnCaress.AuthHeader]::New()
         $auth.sSessionId = $authToken;
-        $auth.sUserName = $config.UsernameSoap;
+        $auth.sUserName = $config.UsernameAPI;
         $caressService.AuthHeaderValue = $auth
-    } else {
-        throw "Could not retreive authentication token from $($caressService.Url) for user $($config.UsernameSoap)"
+    }
+    else {
+        throw "Could not retrieve authentication token from [$($caressService.Url)] for user [$($config.UsernameAPI)]"
     }
 
     if (-not($dryRun -eq $true)) {
@@ -58,12 +58,14 @@ try {
 
         try {
             $null = $CaressService.RemoveUsergroup($memberschip)
-        } catch {
+        }
+        catch {
             if ($_.Exception.Message -match 'Response is not well-formed XML.') {
                 # This might be encountered due to a bug in the WSDL, the error message in Postman is correct.
                 Write-Verbose "Er zijn geen overeenkomstige gegevens aanwezig bij UserSysId & UsergroupSysId error: $($_.Exception.Message)"
                 Write-Verbose "Usergroup Allready $($memberschip.UsergroupSysId) removed from user $($memberschip.UserSysId)" -Verbose
-            } else {
+            }
+            else {
                 throw $_
             }
         }
@@ -74,7 +76,8 @@ try {
                 IsError = $false
             })
     }
-} catch {
+}
+catch {
     $success = $false
     $ex = $PSItem
     $errorMessage = "Could not revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
@@ -84,7 +87,8 @@ try {
             Message = $errorMessage
             IsError = $true
         })
-} finally {
+}
+finally {
     $result = [PSCustomObject]@{
         Success   = $success
         Auditlogs = $auditLogs

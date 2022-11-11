@@ -1,21 +1,21 @@
 [
   {
-    "key": "urlSoap",
+    "key": "urlBase",
     "type": "input",
-    "defaultValue": "",
+    "defaultValue": "https://<customerenv>.mijncaress.nl",
     "templateOptions": {
-      "label": "SOAP web service URL",
-      "placeholder": "https://<root url>/soap/InvokableUserManagement/IinvUserManagement",
+      "label": "base web service URL",
+      "placeholder": "https://<customerenv>.mijncaress.nl",
       "required": true
     }
   },
   {
-    "key": "certificateSoap",
+    "key": "certificatePath",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
-      "label": "SOAP SSL certificate (PFX)",
-      "placeholder": "C:\\ProgramData\\Tools4ever\\HelloID\\Provisioning\\mijncaress\\Certificaat.pfx",
+      "label": "SSL certificate (PFX)",
+      "placeholder": "D:\\Program files\\Tools4ever\\HelloID\\Provisioning\\mijnCaress\\Certificaat.pfx",
       "required": true
     }
   },
@@ -36,26 +36,26 @@
     "defaultValue": "",
     "templateOptions": {
       "label": "SOAP wsdl file location",
-      "placeholder": "C:\\ProgramData\\Tools4ever\\HelloID\\Provisioning\\mijncaress\\IinvUserManagementservice.wsdl",
+      "placeholder": "D:\\Program files\\Tools4ever\\HelloID\\Provisioning\\mijnCaress\\IinvUserManagementservice.wsdl",
       "required": true
     }
   },
   {
-    "key": "usernameSoap",
+    "key": "usernameAPI",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
-      "label": "User name (soap)",
+      "label": "Username for the SOAP and EST API",
       "placeholder": "Please enter user name",
       "required": true
     }
   },
   {
-    "key": "passwordSoap",
+    "key": "passwordAPI",
     "type": "input",
     "defaultValue": "",
     "templateOptions": {
-      "label": "Password (soap)",
+      "label": "Password for the SOAP and REST API",
       "type": "password",
       "placeholder": "Please enter a password",
       "required": true
@@ -90,7 +90,7 @@
     "templateOptions": {
       "label": "UsersLocationFile",
       "description": "Used by the resource Script to store the existing MijnCaress Accounts and Authorizations on disk",
-      "placeholder": "..\\install\\",
+      "placeholder": "D:\\Program files\\Tools4ever\\HelloID\\Provisioning\\mijnCaress\\Resources",
       "required": true
     }
   },
@@ -101,8 +101,18 @@
     "templateOptions": {
       "label": "DisciplineMappingFile",
       "description": "Used to map between a Helloid function and a MijnCaress discipline ",
-      "placeholder": "..\\install\\DisciplineMapping.csv",
+      "placeholder": "D:\\Program files\\Tools4ever\\HelloID\\Provisioning\\mijnCaress\\DisciplineMapping.csv",
       "required": true
+    }
+  },
+  {
+    "key": "updateOnCorrelate",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "update accounts when correlated",
+      "description": "When toggled, accounts will be updated based on the account mapping",
+      "required": false
     }
   },
   {

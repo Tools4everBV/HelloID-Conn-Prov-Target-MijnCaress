@@ -1,5 +1,9 @@
+$configuration = '[copy paste from target using: write-verbose -verbose $configuration]'
+
 $config = ConvertFrom-Json $configuration
 $success = $false
+
+write-verbose -verbose "$configuration"
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
@@ -33,16 +37,14 @@ try {
             Action  = 'CreateResource'
             IsError = $false
         })
-}
-catch {
+} catch {
     $auditLogs.Add([PSCustomObject]@{
             Message = "Error: $( $_.Exception.Message)"
             Action  = 'CreateResource'
             IsError = $true
         })
 
-}
-finally {
+} finally {
     # Send results
     $result = [PSCustomObject]@{
         Success   = $success

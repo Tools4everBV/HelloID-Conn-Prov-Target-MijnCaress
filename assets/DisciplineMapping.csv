@@ -1,3 +1,4 @@
-Medewerker Assemblage;Logistiek adviseur
-Tester;Administratie
-Developer;Ondersteuner
+Function;FunctionCode;DisciplineName
+HBO-Verpleegkundige;200;Verpleegkundige
+Helpende;100;Helpende
+Leerling Helpende;101;Helpende

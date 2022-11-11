@@ -6,7 +6,7 @@
 | This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.       |
 
 <p align="center">
-  <img src="https://www.mijnCaress.nl/wp-content/uploads/2021/01/logomijnCaress-300x138.png">
+  <img src="https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-MijnCaress/blob/main/assets/mijnCaress-logo-zonder-tekst.png">
 </p>
 
 ## Table of contents
@@ -60,6 +60,10 @@ The following settings are required to connect to the API.
 ```powershell
 # Specitfy the HelloID property to map to a mijnCaress Discipline
 $DisciplineNameLookUpValue = $p.PrimaryContract.Title.Name
+
+# Specitfy the HelloID correlationfield and value
+$correlationField = "salaryEmployeeNr"
+$correlationvalue = $account.EmployeeId
 ```
 
 
@@ -69,23 +73,21 @@ $DisciplineNameLookUpValue = $p.PrimaryContract.Title.Name
 - User credentials to access the mijnCaress Webservice
 - Take note of the settings you can find in the connection Settings.
 - An Encryption key, used for encrypting and decrypting passwords of new users created by HelloID
-- Determine the Property EmployeeId with contains a link to the employee Object. And determine the property to correlate existing user accounts. The connector currently correlate users on the username.
+- Determine the Property EmployeeId with contains a link to the employee Object. And determine the property to correlate existing user accounts. The connector currently correlate users on the username and optional on the salaryNumber through the rest-API
 - A mapping file between a HelloID person's function or title and a MijnCaress Discipline. In the assets folder you can find a CSV example file and a stand-alone script to retrieve the disciplines.
 
 ### Remarks
 - In mijnCaress it is possible to have multiple users accounts for a single employee. But this is not commonly used across mijnCaress implementation. The connector is created based on the primary contract, which results in 1 HelloID person having 1 mijnCaress account.
 - The errors returned by the webservice do not always describe the actual issue. For instance, this error may be occurring: **"Access violation at address 00000000027E92E4 in module 'CaressApplicatieServer.exe'. Read of address FFFFFFFFFFFFFFFF"**. This is returned whether there is some wrong within input like the "name" property contains too many characters or a special character.
 - The fields Username, Name, UPN, Password and Start are mandatory in the API when creating new user accounts.
+- The MustChangePassword Property is always a mandatory field for updating an account. You must specify "T" or "F"
+- The MustChangePassword Property is turned off when a update event is triggerd, it's not possible to get the current state.
 - You cannot request a single user account. The webservice contains only a List request. This request can take up to 50 seconds to retrieve the complete list of users. Therefore, the connector works with a local cache file where the existing users are saved. This file is created and updated in the resource script before each enforcement.
 
 - You can add the same group multiple times to an user account. And the revoke web call removes a group one by one. To minimal incorrect group assignments the grant scripts checks first if the user is already granted to the usergroup, and if so the actual grant is skipped. But keep this in mind when implementing the connector
-- The MustChangePassword Property is a Mandatory field for updating an account. You must specify "T" or "F"
-- You cannot clear a property. You can only update properties. This means when a property must cleared you have to send a new value. For the end date, you can send a Date far in the future. For example 9999-01-01. The connector solves the end date problem. And it will set the date 9999-01-01 if exsiting MijnCaress account has an Enddate and the HelloID account does not have an end date.
 
+- You cannot clear a property. You can only update properties. This means when a property must cleared you have to send a new value. For the end date, you can send a date in the future until 2200-01-01 The connector solves the end date problem. And it will set the date 2200-01-01 if exsiting MijnCaress account has an Enddate and the HelloID account does not have an end date.
 
-## Setup the connector
-
-> _How to setup the connector in HelloID._ Are special settings required. Like the _primary manager_ settings for a source connector.
 
 ## Getting help
 

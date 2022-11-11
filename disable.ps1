@@ -1,7 +1,5 @@
 #####################################################
 # HelloID-Conn-Prov-Target-MijnCaress-Disable
-#
-# Version: 1.0.0
 #####################################################
 # Initialize default values
 $config = $configuration | ConvertFrom-Json
@@ -21,57 +19,54 @@ switch ($($config.IsDebug)) {
 
 # Account mapping
 $account = [PSCustomObject]@{
-    SysId  = $aRef      #  $null for new account instead of update
-    Status = 'N'        # "A" = Active, "N" = Not active
+    SysId          = $aRef      #  $null for new account instead of update
+    Status         = 'N'        # "A" = Active, "N" = Not active
+    MustChangePass = 'F' # Note specification is required
 }
 
 
 try {
-    # Add an auditMessage showing what will happen during enforcement
-    if ($dryRun -eq $true) {
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "Disable MijnCaress account for: [$($p.DisplayName)], will be executed during enforcement"
-            })
-    }
     Write-Verbose "Setup connection with MijnCaress [$($config.wsdlFileSoap)]"
     $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
     $caressService = [MijnCaress.IinvUserManagementservice]::new();
-    $caressService.Url = $config.urlSoap
+    $caressService.Url = "$($config.urlBase)/soap/InvokableUserManagement/IinvUserManagement"
 
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
-    $certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
+    $certificate.Import($Config.CertificatePath, $config.CertificatePassword, 'UserKeySet')
     $null = $caressService.ClientCertificates.Add($certificate)
 
     if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
         $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
     }
-    $authToken = $CaressService.CreateSession($config.UsernameSoap, $config.PasswordSoap)
+    $authToken = $CaressService.CreateSession($config.UsernameAPI, $config.PasswordAPI)
 
     if (-not [string]::IsNullOrEmpty($authToken)) {
         $auth = [MijnCaress.AuthHeader]::New()
         $auth.sSessionId = $authToken;
-        $auth.sUserName = $config.UsernameSoap;
+        $auth.sUserName = $config.UsernameAPI;
         $caressService.AuthHeaderValue = $auth
-    } else {
+    }
+    else {
         throw "Could not retreive authentication token from $($caressService.Url) for user $($config.UsernameSoap)"
     }
 
+    [MijnCaress.TremSetUser] $newUser = [MijnCaress.TremSetUser]::new()
+    $newUser.SysId = $aRef
+    $newUser.Status = $account.Status
+    $newUser.MustChangePass = $account.MustChangePass
+
+    Write-Verbose "Disabling MijnCaress account: [$aRef] for: [$($p.DisplayName)]"
     if (-not($dryRun -eq $true)) {
-        [MijnCaress.TremSetUser] $newUser = [MijnCaress.TremSetUser]::new()
-        $newUser.SysId = $aRef
-        $newUser.Status = $account.Status
-        $newUser.MustChangePass = "F" # Is always required in API! ?
-
-        Write-Verbose "Disabling MijnCaress account: [$aRef] for: [$($p.DisplayName)]"
         $null = $caressService.SetUser($newUser)
-
-        $success = $true
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "Disable account for: [$($p.DisplayName)] was successful."
-                IsError = $false
-            })
     }
-} catch {
+    $success = $true
+    $auditLogs.Add([PSCustomObject]@{
+            Message = "Disable account for: [$($p.DisplayName)] was successful."
+            IsError = $false
+        })
+
+}
+catch {
     $success = $false
     $ex = $PSItem
     $errorMessage = "Could not disable MijnCaress account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
@@ -81,7 +76,8 @@ try {
             Message = $errorMessage
             IsError = $true
         })
-} finally {
+}
+finally {
     $result = [PSCustomObject]@{
         Success   = $success
         Auditlogs = $auditLogs

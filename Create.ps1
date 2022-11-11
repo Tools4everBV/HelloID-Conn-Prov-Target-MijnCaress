@@ -1,46 +1,138 @@
 #####################################################
 # HelloID-Conn-Prov-Target-MijnCaress-Create
-#
-# Version: 1.0.0
 #####################################################
 # Initialize default values
 $config = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
 $success = $false
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
+$action = "process"
 
 # Specitfy the HelloID property to map to a MijnCaress Discipline
-$DisciplineNameLookUpValue = $p.PrimaryContract.Title.Name
+$DisciplineNameLookUpValue = $p.PrimaryContract.Title.code
 
-# Account mapping
-$account = [PSCustomObject]@{
-    SysId          = $null                              #  $null for new account instead of update
-    Name           = $p.Name.NickName + ' ' + $p.name.FamilyName
-    AdUsername     = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
-    Username       = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
-    UPN            = $p.Accounts.MicrosoftActiveDirectory.SamAccountName
-    Start          = $p.PrimaryContract.StartDate       # "YYYY-MM-dd"
-    End            = $p.PrimaryContract.Enddate         # "YYYY-MM-dd"
-    Status         = 'N'                                # "A" = Active, "N" = Not active
-    EmployeeId     = $p.externalId                      # $p.ExternalId    # The employee number
-    DisciplineName = $Null                              # Additional Mapping file is needed between function name en MijnCaress disiplineName
-    Password       = 'Welkom01'                         # Will be encrypted
-    MustChangePass = 'F'                                # Note specification is required
+# Specitfy the HelloID correlationfield and value
+$correlationField = "salaryEmployeeNr"
+$correlationvalue = $account.EmployeeId
+
+#region Support Functions
+function Get-RandomCharacters([int]$length, $characters) {
+    $random = 1..$length | ForEach-Object { Get-Random -Maximum $characters.length } 
+    $ofs = "" 
+    return [String]$characters[$random]
 }
 
-# Enable TLS1.2
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+function New-RandomPassword() {
+    try {
+        #passwordSpecifications:
+        $length = 8
+        $upper = 2
+        $number = 2
+        $special = 2
+        $lower = $length - $upper - $number - $special
+      
+        $chars = "abcdefghkmnprstuvwxyz"
+        $NumberPool = "23456789"
+        $specialPool = "!#%^*()"
 
-# Set debug logging
-switch ($($config.IsDebug)) {
-    $true { $VerbosePreference = 'Continue' }
-    $false { $VerbosePreference = 'SilentlyContinue' }
+        $CharPoolLower = $chars.ToLower()
+        $CharPoolUpper = $chars.ToUpper()
+
+        $password = Get-RandomCharacters -characters $CharPoolUpper -length $upper
+        $password += Get-RandomCharacters -characters $NumberPool -length $number
+        $password += Get-RandomCharacters -characters $specialPool -length $special
+        $password += Get-RandomCharacters -characters $CharPoolLower -length $Lower
+
+        $passwordArray = $password.ToCharArray()   
+        $passwordScrambledArray = $passwordArray | Get-Random -Count $passwordArray.Length     
+        $password = -join $passwordScrambledArray
+
+        return $password
+    }
+    catch {
+        throw("An error was thrown while generating password: $($_.Exception.Message): $($_.ScriptStackTrace)")
+    }
 }
 
-# Set to true if accounts in the target system must be updated
-$updatePerson = $true
+function GenerateName {
+    [cmdletbinding()]
+    Param (
+        [object]$person
+    )
+    try {
+        $initials = $person.Name.Initials -replace "\W"
+        $initials = ([string]::Join('.', ([string[]]$initials.ToCharArray()))) + "."
+        $FamilyNamePrefix = $person.Name.FamilyNamePrefix
+        $FamilyName = $person.Name.FamilyName           
+        $PartnerNamePrefix = $person.Name.FamilyNamePartnerPrefix
+        $PartnerName = $person.Name.FamilyNamePartner 
+        $convention = $person.Name.Convention
+        $Name = ""       
 
-#region functions
+        switch ($convention) {
+            "B" {
+                $Name += $FamilyName
+                $Name += ", " + $initials
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+            }
+            "P" {
+                $Name += $PartnerName
+                $Name += ", " + $initials
+                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+            }
+            "BP" {
+                $Name += $FamilyName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { $PartnerNamePrefix + " " }
+                $Name += $PartnerName
+                $Name += ", " + $initials
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+            }
+            "PB" {
+                $Name += $PartnerName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
+                $Name += $FamilyName
+                $Name += ", " + $initials
+                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+                
+            }
+            Default {
+                $Name += $FamilyName
+                $Name += ", " + $initials
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }           
+            }
+        }      
+        return $Name
+            
+    }
+    catch {
+        throw("An error was found in the name convention algorithm: $($_.Exception.Message): $($_.ScriptStackTrace)")
+    } 
+}
+
+function format-date {
+    [CmdletBinding()]
+    Param
+    (
+        [string]$date,
+        [string]$InputFormat,
+        [string]$OutputFormat
+    )
+    try {
+        if (-NOT([string]::IsNullOrEmpty($date))) {    
+            $dateString = get-date([datetime]::ParseExact($date, $InputFormat, $null)) -Format($OutputFormat)
+        }
+        else {
+            $dateString = $null
+        }
+
+        return $dateString
+    }
+    catch {
+        throw("An error was thrown while formatting date: $($_.Exception.Message): $($_.ScriptStackTrace)")
+    }
+    
+}
+
 function New-DES {
     [CmdletBinding()]
     param( [Parameter(Mandatory)]
@@ -71,154 +163,256 @@ function ConvertTo-EncryptedString {
     $buffer = $cryptoTransform.TransformFinalBlock($encryptionInput, 0, $encryptionInput.Length)
     Write-Output ([System.Convert]::ToBase64String($buffer))
 }
-#endregion
 
 try {
-    Write-Verbose 'Encrypting Password and search for correct Discipline Name'
-    $account.Password = ([string](ConvertTo-EncryptedString -StringToEncrypt $account.Password -EncryptionKey $config.EncryptionKey))
-    $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' -Header FunctionName, DisciplineName
-    $DisciplineName = ($DisciplineMapping | Where-Object { $_.FunctionName -eq $DisciplineNameLookUpValue }).DisciplineName
-    if ($null -eq $DisciplineName) {
-        throw "No Discipline Name found for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
-    } elseif ( $DisciplineName.count -gt 1) {
-        throw "Multiple Discipline names found [$($DisciplineName -join ', ')] for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
+    # Account mapping
+    $account = [PSCustomObject]@{
+        SysId           = $null #null for new account instead of update
+        Name            = GenerateName -person $p
+        AdUsername      = $p.Accounts.MicrosoftActiveDirectory.samAccountName
+        Username        = $p.Accounts.MicrosoftActiveDirectory.samAccountName
+        UPN             = $p.Accounts.MicrosoftActiveDirectory.UserPrincipalName 
+        Start           = format-date -date $p.PrimaryContract.StartDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
+        End             = format-date -date $p.PrimaryContract.EndDate -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
+        Status          = 'N' # "A" = Active, "N" = Not active
+        EmployeeId      = $p.ExternalId # $p.ExternalId for lookup. resolved in the sysID of the employee
+        DisciplineSysId = $Null  # Additional Mapping file is needed between function name en MijnCaress disiplineName
+        Password        = New-RandomPassword  # Will be encrypted
+        MustChangePass  = 'T' # Note specification is required
     }
-    $account.DisciplineName = $DisciplineName
+
+    write-verbose "account: $($account | convertto-json)"
+
+    # Enable TLS1.2
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+
+    # Set debug logging
+    switch ($($config.IsDebug)) {
+        $true { $VerbosePreference = 'Continue' }
+        $false { $VerbosePreference = 'SilentlyContinue' }
+    }
+
+    # Set to true if accounts in the target system must be updated
+    $updatePerson = $config.updateOnCorrelate
 
     Write-Verbose "Setup connection with mijnCaress [$($config.wsdlFileSoap)]"
     $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
     $caressService = [MijnCaress.IinvUserManagementservice]::new();
-    $caressService.Url = $config.urlSoap
-
+    $caressService.Url = "$($config.urlBase)/soap/InvokableUserManagement/IinvUserManagement"
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
-    $certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
+    $certificate.Import($Config.certificatePath, $config.CertificatePassword, 'UserKeySet')
     $null = $caressService.ClientCertificates.Add($certificate)
 
     if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
         $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
     }
-    $authToken = $CaressService.CreateSession($config.UsernameSoap, $config.PasswordSoap)
+    $authToken = $CaressService.CreateSession($config.UsernameAPI, $config.PasswordAPI)
 
     if ($authToken) {
         $auth = [MijnCaress.AuthHeader]::New()
         $auth.sSessionId = $authToken;
-        $auth.sUserName = $config.UsernameSoap;
+        $auth.sUserName = $config.UsernameAPI;
         $caressService.AuthHeaderValue = $auth
-    } else {
-        throw "Could not retrieve authentication token from [$($caressService.Url)] for user [$($config.UsernameSoap)]"
+    }
+    else {
+        throw "Could not retrieve authentication token from [$($caressService.Url)] for user [$($config.UsernameAPI)]"
     }
 
+    Write-Verbose "Encrypting Password"
+    $PasswordPlainText = $account.Password
+    $account.Password = ([string](ConvertTo-EncryptedString -StringToEncrypt $account.Password -EncryptionKey $config.EncryptionKey))
+    
+
+    Write-Verbose 'search for correct Discipline Name'
+    $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' #-Header FunctionName, DisciplineName
+    $DisciplineName = ($DisciplineMapping | Where-Object { $_.functionCode -eq $DisciplineNameLookUpValue }).DisciplineName
+
+    write-verbose "$($config.DisciplineMappingFile) contains $(($DisciplineMapping | measure-object).count) rows" 
+
+    if ($null -eq $DisciplineName) {
+        throw "No Discipline Name found for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
+    }
+    elseif ( $DisciplineName.count -gt 1) {
+        throw "Multiple Discipline names found [$($DisciplineName -join ', ')] for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
+    }
+   
     # List is needed for lookup the ID.
     Write-Verbose 'Getting All disciplines'
     $DisciplineList = $caressService.GetDisciplines()
+    $DisciplineSysId = ($DisciplineList | Where-Object { $_.Name -eq $DisciplineName }).SysId
+    if ($null -eq $DisciplineSysId ) {
+        throw "No DisiplineSysId is found on Name [$($DisciplineName)]"
+    }
+
+    $account.DisciplineSysId = $DisciplineSysId
+
+    # List is needed for lookup the ID.
+    Write-Verbose 'Getting All disciplines from mijnCaress'
+    $DisciplineList = $caressService.GetDisciplines()
+    write-verbose "DisciplineList contains $(($DisciplineList | measure-object).count) rows" 
 
     # Verify if a user must be created or correlated
-    Write-Verbose "Getting All user accounts from disk [$($config.UserLocationFile)\users.csv]"
+    Write-Verbose "Getting All user accounts from resource [$($config.UserLocationFile)\users.csv]"
     $userList = Import-Csv -Path "$($config.UserLocationFile)\users.csv"
 
-    $employee = $caressService.GetEmployeeById($account.EmployeeId) # throws error if employee not found
-    if ($employee) {
-        Write-Verbose "Found employee Name: [$($employee.Name)] Id: [$($employee.Id)]"
+    write-verbose "$($config.UserLocationFile)\users.csv contains $(($userList | measure-object).count) rows" 
+
+
+    #search for employee salary number first through REST-API (OPTIONAL)    
+    Write-Verbose "Setup connection for mijnCaress REST-API"
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($config.certificatePath, $config.CertificatePassword) 
+    $password = ConvertTo-SecureString -String "$($config.passwordAPI)" -AsPlainText -Force 
+    $Credentials = New-Object System.Management.Automation.PSCredential ($config.usernameAPI, $password)
+
+    try {
+
+        #enddate filter to search both active and inactive users
+        $employee = (Invoke-RestMethod -uri "$($config.urlBase)/employees?$searchField=$searchvalue&checkEmployeeOrganizationalUnitAuthorization=false&endDate=2200-01-01" -Certificate $certificate -Credential $Credentials).employees
+        $employee = $employee | sort-object identifier -unique
+
+        if (($employee | measure-object).count -gt 1) {
+            write-verbose "$($employee | convertto-json)"
+            Throw "multiple ($(($employee | measure-object).count)) employees with salaryEmployeeNr [$($account.EmployeeId)] found"
+        }
     }
+    catch {
+
+        if ($_.ErrorDetails.Message) {
+            $errorMessage = $_.ErrorDetails.Message | convertfrom-json
+            Throw "Failed to find employee through rest API - $($errorMessage.ErrorMessage)"
+        }
+        else {
+            Throw "Failed to find employee through rest API - $($_)"
+        }
+    }
+
+    if ($employee) {
+        Write-Verbose "Found employee Name: [$($employee.longName)] Id: [$($employee.Identifier)]"
+        $account.EmployeeId = $employee.identifier
+    }
+    else {
+        Throw "Employee not found"
+    }
+    #end REST-API section
+
+    $employee = $caressService.GetEmployeeById($account.EmployeeId) # throws error if employee not found
+
+    if ($employee) {
+        Write-Verbose "Found employee Name: [$($employee.name)] employeeSysid: [$($employee.SysID)]"
+        $account.EmployeeId = $employee.SysID
+    }
+    else {
+        Throw "Employee not found"
+    }
+
     [array]$useraccountsFoundOnEmployeeID = $userList.Where({ $_.EmployeeSysId -eq $employee.SysId })
-    Write-Verbose "Found [$($useraccountsFoundOnEmployeeID.Count)] users account for employee [$($employee.Id)], account(s) [$($useraccountsFoundOnEmployeeID.Username -join ", ")]"
+    Write-Verbose "Found ($($useraccountsFoundOnEmployeeID.Count)) users account for employee [$($employee.Id)], account(s) [$($useraccountsFoundOnEmployeeID.Username -join ", ")]"
 
     $useraccountsOndifferentEmployeeID = $userList.Where({ $_.username -eq $account.Username -and $_.EmployeeSysId -ne $employee.SysId })
     if ($useraccountsOndifferentEmployeeID ) {
         throw "Account with username $($account.Username) allready exist on a different Employee [$($useraccountsOndifferentEmployeeID.EmployeeSysId)]"
     }
-
+    
+    write-verbose "selecting user based on username [$($account.Username)]"
     $userAccountFound = $useraccountsFoundOnEmployeeID.Where({ $_.username -eq $account.Username })
-    $account.SysId = $userAccountFound.SysId
 
     if (-not($userAccountFound)) {
         $action = 'Create'
-    } elseif ($updatePerson -eq $true) {
+    }
+    elseif ($updatePerson -eq $true) {
         $action = 'Update-Correlate'
-    } else {
+    }
+    else {
         $action = 'Correlate'
     }
 
-    # Add an auditMessage showing what will happen during enforcement
-    if ($dryRun -eq $true) {
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "$action mijnCaress account [$($account.Username)] for: [$($p.DisplayName)], will be executed during enforcement"
-            })
-    }
-
     # Process
-    if (-not($dryRun -eq $true)) {
-        switch ($action) {
-            'Create' {
-                Write-Verbose "Creating mijnCaress account for: [$($p.DisplayName)]"
-                [MijnCaress.TremSetUser]$newUser = [MijnCaress.TremSetUser]::new()
-                $newUser.SysId = $null
-                $newUser.Username = $account.Username
-                $newUser.Name = $account.Name
-                $newUser.Start = $account.Start
-                $newUser.End = $account.End
-                $newUser.Status = $account.Status
-                $newUser.AdUsername = $account.AdUsername
-                $newUser.Password = $account.Password
-                $newUser.MustChangePass = $account.MustChangePass
-                $newUser.UPN = $account.UPN
-                $newUser.EmployeeSysId = $employee.SysId
+    switch ($action) {
+        'Create' {
+            Write-Verbose "Creating mijnCaress account for: [$($p.DisplayName)]"
+            [MijnCaress.TremSetUser]$newUser = [MijnCaress.TremSetUser]::new()
+            $newUser.SysId = $null
+            $newUser.Username = $account.Username
+            $newUser.Name = $account.Name
+            $newUser.Start = $account.Start
+            $newUser.End = $account.End
+            $newUser.Status = $account.Status
+            $newUser.AdUsername = $account.AdUsername
+            $newUser.Password = $account.Password
+            $newUser.MustChangePass = $account.MustChangePass
+            $newUser.UPN = $account.UPN
+            $newUser.EmployeeSysId = $account.EmployeeId
+            $newUser.DisciplineSysId = $DisciplineSysId
 
-                # Error Controle
-                $DisciplineSysId = ($DisciplineList | Where-Object { $_.Name -eq $account.DisciplineName }).SysId
-                if ($null -eq $DisciplineSysId ) {
-                    throw "No disiplineSysId found with provided name [$($account.DisciplineName)], make sure you mapping is correct"
-                }
-                $newUser.DisciplineSysId = $DisciplineSysId
-
+            if (-not($dryRun -eq $true)) {
                 $createResponse = $caressService.SetUser($newUser)
                 $accountReference = $createResponse
             }
+            write-verbose "create newUser: $($newUser | convertto-json)"
 
-            'Update-Correlate' {
-                Write-Verbose 'Updating and correlating mijnCaress account'
-                [MijnCaress.TremSetUser]$setUser = [MijnCaress.TremSetUser]::new()
-                $setUser.SysId = $userAccountFound.SysId
-                $setUser.Username = $account.Username
-                $setUser.Name = $account.Name
-                $setUser.Start = $account.Start
-                if (-not [string]::IsNullOrEmpty($userAccountFound.End) -and [string]::IsNullOrEmpty($account.End)) {
-                    $setUser.End = '9999-01-01'
-                } else {
-                    $setUser.End = $account.End
-                }
-                $setUser.Status = $account.Status
-                $setUser.AdUsername = $account.AdUsername
-                $setUser.Password = $account.Password
-                $setUser.MustChangePass = $account.MustChangePass
-                $setUser.UPN = $account.UPN
-                $setUser.EmployeeSysId = $employee.SysId
-
-                # Error Controle
-                $DisciplineSysId = ($DisciplineList | Where-Object { $_.Name -eq $account.DisciplineName }).SysId
-                if ($null -eq $DisciplineSysId ) {
-                    throw "No disiplineSysId found with provided name [$($account.DisciplineName)], make sure you mapping is correct"
-                }
-                $setUser.DisciplineSysId = $DisciplineSysId
-
-                $createResponse = $caressService.SetUser($setUser)
-                $accountReference = $userAccountFound.SysId
-                break
-            }
-
-            'Correlate' {
-                Write-Verbose "Correlating mijnCaress account for: [$($p.DisplayName)]"
-                $accountReference = $userAccountFound.SysId
-                break
-            }
+            #replace password after create for PlainText
+            $account.password = $PasswordPlainText
         }
-        $auditLogs.Add([PSCustomObject]@{
-                Message = "$action account for: [$($p.DisplayName)] was successful. accountReference is: [$($accountReference)]"
-                IsError = $false
-            })
+
+        'Update-Correlate' {
+            $account.SysId = $userAccountFound.SysId
+            $account.status = $userAccountFound.status
+            $account.MustChangePass = "F"
+
+            Write-Verbose 'Updating and correlating mijnCaress account'
+            [MijnCaress.TremSetUser]$setUser = [MijnCaress.TremSetUser]::new()
+            
+            $setUser.SysId = $userAccountFound.SysId
+      
+            #keep exisiting logindetails
+            $setUser.Status = $null
+            $setUser.Username = $null
+            $setUser.password = $null
+            $setUser.EmployeeSysId = $null
+
+
+            $setUser.Start = $account.Start
+
+            if ([string]::IsNullOrEmpty($account.End)) {
+                $setUser.End = '2200-01-01' #2200; latest possible
+            }
+            else {
+                $setUser.End = $account.End
+            }
+  
+            $setuser.name = $account.name
+            $setUser.MustChangePass = $account.MustChangePass
+            $setUser.AdUsername = $account.AdUsername
+            $setUser.UPN = $account.UPN            
+            $setUser.DisciplineSysId = $DisciplineSysId
+            
+            if (-not($dryRun -eq $true)) {
+                $null = $caressService.SetUser($setUser)
+            }
+            else {
+                write-verbose "found user details: $($userAccountFound | convertto-json)"
+                write-verbose "correlate/update setUser: $($setUser | convertto-json)"
+            }
+            $accountReference = $setUser.SysId
+            $account.password = $null
+            break
+        }
+        'Correlate' {
+            Write-Verbose "Correlating mijnCaress account for: [$($p.DisplayName)]"
+            $account.SysId = $userAccountFound.SysId
+            $accountReference = $account.SysId
+
+            $account.password = $null
+            break
+        }
     }
+    $auditLogs.Add([PSCustomObject]@{
+            Message = "$action account for: [$($p.DisplayName)] was successful. accountReference is: [$($accountReference)]"
+            IsError = $false
+        })
     $success = $true
-} catch {
+}
+catch {
     $success = $false
     $ex = $PSItem
     $errorMessage = "Could not $action mijnCaress account for: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
@@ -229,15 +423,26 @@ try {
             IsError = $true
         })
     # End
-} finally {
+}
+finally {
     if ($null -ne $CaressService) {
         $CaressService.DestroySession();
     }
+
+
     $result = [PSCustomObject]@{
         Success          = $success
         AccountReference = $accountReference
         Auditlogs        = $auditLogs
         Account          = $account
+
+        # Optionally return data for use in other systems
+        ExportData       = [PSCustomObject]@{
+            AccountReference = $AccountReference
+            Username         = $account.username
+            name             = $account.name
+
+        }
     }
     Write-Output $result | ConvertTo-Json -Depth 10
 }

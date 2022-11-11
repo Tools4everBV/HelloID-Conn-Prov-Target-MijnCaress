@@ -1,23 +1,34 @@
+$configuration = '[copy paste from target using: write-verbose -verbose $configuration]'
+
+try{
 $config = ConvertFrom-Json $configuration
 
-$null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
-$caressService = [MijnCaress.IinvUserManagementservice]::new();
-$caressService.Url = $config.urlSoap
+    Write-Verbose "Setup connection with mijnCaress [$($config.wsdlFileSoap)]"
+    $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
+    $caressService = [MijnCaress.IinvUserManagementservice]::new();
+    $caressService.Url = "$($config.urlBase)/soap/InvokableUserManagement/IinvUserManagement"
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New()
+    $certificate.Import($Config.certificatePath, $config.CertificatePassword, 'UserKeySet')
+    $null = $caressService.ClientCertificates.Add($certificate)
 
-# $caressService.Proxy = [System.Net.WebProxy]::new($config.ProxyAddress)
-$certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-$certificate.Import($Config.CertificateSoap, $config.CertificatePassword, 'UserKeySet')
-$null = $caressService.ClientCertificates.Add($certificate)
+    if ( -not [string]::IsNullOrEmpty($Config.ProxyAddress)) {
+        $caressService.Proxy = [System.Net.WebProxy]::New($config.ProxyAddress)
+    }
+    $authToken = $CaressService.CreateSession($config.UsernameAPI, $config.PasswordAPI)
 
-try {
-    $authToken = $CaressService.CreateSession($config.UsernameSoap, $config.PasswordSoap)
-    $auth = [MijnCaress.AuthHeader]::New()
-    $auth.sSessionId = $authToken;
-    $auth.sUserName = $config.UsernameSoap;
-    $caressService.AuthHeaderValue = $auth
+    if ($authToken) {
+        $auth = [MijnCaress.AuthHeader]::New()
+        $auth.sSessionId = $authToken;
+        $auth.sUserName = $config.UsernameAPI;
+        $caressService.AuthHeaderValue = $auth
+    }
+    else {
+        throw "Could not retrieve authentication token from [$($caressService.Url)] for user [$($config.UsernameAPI)]"
+    }
+
 
     $DisciplineList = $caressService.GetDisciplines()
-    $DisciplineList | Export-Csv  -Path c:\temp\disiplineList.csv -NoTypeInformation -Encoding UTF8
+    $DisciplineList | Export-Csv  -Path "$($config.UserLocationFile)\disiplineList-exportall.csv" -NoTypeInformation -Encoding UTF8
 
 } catch {
     $_.Exception.Message
