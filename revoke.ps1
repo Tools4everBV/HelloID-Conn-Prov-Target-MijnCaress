@@ -58,14 +58,12 @@ try {
 
         try {
             $null = $CaressService.RemoveUsergroup($memberschip)
-        }
-        catch {
+        } catch {
             if ($_.Exception.Message -match 'Response is not well-formed XML.') {
                 # This might be encountered due to a bug in the WSDL, the error message in Postman is correct.
                 Write-Verbose "Er zijn geen overeenkomstige gegevens aanwezig bij UserSysId & UsergroupSysId error: $($_.Exception.Message)"
                 Write-Verbose "Usergroup Allready $($memberschip.UsergroupSysId) removed from user $($memberschip.UserSysId)" -Verbose
-            }
-            else {
+            } else {
                 throw $_
             }
         }
@@ -76,8 +74,7 @@ try {
                 IsError = $false
             })
     }
-}
-catch {
+} catch {
     $success = $false
     $ex = $PSItem
     $errorMessage = "Could not revoke MijnCaress entitlement: [$($pRef.Reference)] from: [$($p.DisplayName)]. Error: $($ex.Exception.Message)"
@@ -87,8 +84,7 @@ catch {
             Message = $errorMessage
             IsError = $true
         })
-}
-finally {
+} finally {
     $result = [PSCustomObject]@{
         Success   = $success
         Auditlogs = $auditLogs

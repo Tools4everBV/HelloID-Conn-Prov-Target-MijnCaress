@@ -24,7 +24,6 @@ $account = [PSCustomObject]@{
     MustChangePass = 'F' # Note specification is required
 }
 
-
 try {
     Write-Verbose "Setup connection with MijnCaress [$($config.wsdlFileSoap)]"
     $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'

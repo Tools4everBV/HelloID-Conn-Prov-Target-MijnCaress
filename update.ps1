@@ -9,8 +9,35 @@ $aRef = $AccountReference | ConvertFrom-Json
 $pp = $previousPerson | ConvertFrom-Json
 $success = $false
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
-# Specitfy the HelloID property to map to a MijnCaress Discipline
-$DisciplineNameLookUpValue = $p.PrimaryContract.Title.code
+# Set debug logging
+switch ($($config.IsDebug)) {
+    $true { $VerbosePreference = 'Continue' }
+    $false { $VerbosePreference = 'SilentlyContinue' }
+}
+
+#RN_TEST:
+if ($dryRun -eq $true) {
+    $p.PrimaryContract.Context.InConditions = $true
+}
+
+if ($p.PrimaryContract.Context.InConditions -eq $true) {
+    $DisciplineNameLookUpValue = $p.PrimaryContract.Title.code
+    $DisciplineNameLookUpValueDetail = $p.PrimaryContract.Title.name
+}
+else {
+    $contracts = $p.contracts | sort-object externalID
+    write-verbose  "PrimaryContract not incondition, using first contract in list"
+
+    foreach ($contract in $contracts) {
+        if ([boolean]$contract.Context.InConditions -eq $true) {
+            write-verbose  "Use contract $($contract.externalID) with title $($contract.Title.code)"
+
+            $DisciplineNameLookUpValue = $contract.Title.code
+            $DisciplineNameLookUpValueDetail = $contract.Title.name
+            break
+        }
+    }
+}
 
 #region Support Functions
 
@@ -93,21 +120,40 @@ function format-date {
     
 }
 
+function format-length {
+    [CmdletBinding()]
+    Param
+    (
+        [string]$string,
+        [int]$maxlength
+    )
+    try {
+        if (-NOT([string]::IsNullOrEmpty($string))) {    
+            $stringformat = $string.substring(0, [System.Math]::Min($maxlength, $string.length))
+        }
+        else {
+            $stringformat = $null
+        }
+
+        return $stringformat
+    }
+    catch {
+        throw("An error was thrown while formatting string: $($_.Exception.Message): $($_.ScriptStackTrace)")
+    }
+    
+}
 try {
     # Account mapping
     $account = [PSCustomObject]@{
         SysId           = $aRef
-        Name            = (GenerateName -person $p)
-        AdUsername      = $p.Accounts.ActiveDirectory.samAccountName
-        #    Username        = ($p.Accounts.ActiveDirectory.samAccountName
+        Name            = format-length -string $(GenerateName -person $p) -maxlength 40
+        AdUsername      = format-length -string $p.Accounts.ActiveDirectory.samAccountName -maxlength 20
         UPN             = $p.Accounts.ActiveDirectory.UserPrincipalName
         Start           = format-date -date $p.PrimaryContract.StartDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
         End             = format-date -date $p.PrimaryContract.EndDate -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
-        # Additional Mapping file is required
-        DisciplineSysId = $p.PrimaryContract.Title.Code      # A lookup against the mapping file is perfromed later in the code
+        DisciplineSysId = $null  # Additional Mapping file is needed between function name en MijnCaress disiplineName
         MustChangePass  = 'F' # Note specification is required
     }
-
 
     #Get Previous User:
     Write-Verbose "Getting All user accounts from resource [$($config.UserLocationFile)\users.csv]"
@@ -125,12 +171,11 @@ try {
         SysId           = $aRef
         Name            = $currentUser.Name
         AdUsername      = $currentUser.AdUsername
-        #    Username        = $currentUser.userName #RN: not on UPDATE
         UPN             = $currentUser.UPN
         Start           = format-date -date $currentUser.start -InputFormat 'yyyy-MM-dd-hh.mm.ss.000000' -OutputFormat "yyyy-MM-dd"
         End             = format-date -date $currentUser.end -InputFormat 'yyyy-MM-dd-hh.mm.ss.000000' -OutputFormat "yyyy-MM-dd"
-        DisciplineSysId = $currentUser.DisciplineSysId     # Additional Mapping file is needed between function name en MijnCaress disiplineName
-        MustChangePass  = 'F'  # Note specification is required
+        DisciplineSysId = $currentUser.DisciplineSysId
+        MustChangePass  = 'F'
     }
 
     # Enable TLS1.2
@@ -141,6 +186,7 @@ try {
         $true { $VerbosePreference = 'Continue' }
         $false { $VerbosePreference = 'SilentlyContinue' }
     }
+
 
     Write-Verbose "Setup connection with mijnCaress [$($config.wsdlFileSoap)]"
     $null = New-WebServiceProxy -Uri $config.wsdlFileSoap  -Namespace 'MijnCaress'
@@ -166,31 +212,37 @@ try {
     }
 
     Write-Verbose 'search for correct Discipline Name'
-    $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' #-Header FunctionName, DisciplineName
-    $DisciplineName = ($DisciplineMapping | Where-Object { $_.functionCode -eq $DisciplineNameLookUpValue }).DisciplineName
+    $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' -encoding UTF8  #-Header: FunctionName, FunctionCode, DisciplineName
+    $DisciplineName = ($DisciplineMapping | Where-Object { $_.Functiecode -eq $DisciplineNameLookUpValue }).DisciplineName
 
     write-verbose "$($config.DisciplineMappingFile) contains $(($DisciplineMapping | measure-object).count) rows" 
-    
+
     if ($null -eq $DisciplineName) {
-        throw "No Discipline Name found for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
+        throw "No Discipline Name found for $DisciplineNameLookUpValueDetail [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
     }
     elseif ( $DisciplineName.count -gt 1) {
         throw "Multiple Discipline names found [$($DisciplineName -join ', ')] for [$DisciplineNameLookUpValue]. Please verify your mapping and configuration"
     }
-
+   
     # List is needed for lookup the ID.
-    Write-Verbose 'Getting All disciplines'
+    Write-Verbose 'Getting All disciplines from services'
     $DisciplineList = $caressService.GetDisciplines()
-    $DisciplineSysId = ($DisciplineList | Where-Object { $_.Name -eq $DisciplineName }).SysId
+    write-verbose "DisciplineList contains $(($DisciplineList | measure-object).count) rows" 
+
+    $Discipline = $DisciplineList | Where-Object { $_.Name -eq $DisciplineName }
+
+    $DisciplineSysId = $Discipline.SysId
     if ($null -eq $DisciplineSysId ) {
         throw "No DisiplineSysId is found on Name [$($DisciplineName)]"
     }
 
-    $account.DisciplineSysId = $DisciplineSysId.tostring()   
+    $account.DisciplineSysId = $DisciplineSysId
+    write-verbose "Found Discipline $($Discipline.name) [$($Discipline.SysId)] for $DisciplineNameLookUpValueDetail [$DisciplineNameLookUpValue]"
+     
+
 
     $propertiesChanged = (Compare-Object @($previousAccount.PSObject.Properties) @($account.PSObject.Properties) -PassThru) | Sort-Object name -Unique
 
-       
     if ($null -eq $propertiesChanged) {
         $update = $false
     }
@@ -225,7 +277,7 @@ try {
         write-verbose "setuser: $($setUser | convertto-json)"
 
         if (-not($dryRun -eq $true)) {
-            $out = $caressService.SetUser($setUser)
+            $null = $caressService.SetUser($setUser)
         }
 
         $auditLogs.Add([PSCustomObject]@{
