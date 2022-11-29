@@ -78,7 +78,12 @@ $correlationvalue = $account.EmployeeId
 
 ### Remarks
 - In mijnCaress it is possible to have multiple users accounts for a single employee. But this is not commonly used across mijnCaress implementation. The connector is created based on the primary contract, which results in 1 HelloID person having 1 mijnCaress account.
-- The errors returned by the webservice do not always describe the actual issue. For instance, this error may be occurring: **"Access violation at address 00000000027E92E4 in module 'CaressApplicatieServer.exe'. Read of address FFFFFFFFFFFFFFFF"**. This is returned whether there is some wrong within input like the "name" property contains too many characters or a special character.
+- The errors returned by the webservice do not always describe the actual issue. For instance
+- This error may be occurring: 
+  - **"Access violation at address 00000000027E92E4 in module 'CaressApplicatieServer.exe'. Read of address FFFFFFFFFFFFFFFF"**. This is returned whether there is some wrong within input like the "name" property contains too many characters or a special character.
+    - name max = 40
+    - adusername max = 20
+  - **HTTP Status 500 – Internal Server ErrorType Exception ReportDescription The server encountered an unexpected condition that prevented it from fulfilling the request.Exceptionjava.lang.NullPointerException Note The full stack trace of the root cause is available in the server logs.Apache Tomcat/x.x.xx** This is returned when the response is too big, caused by, for example, too many function lines.
 - The fields Username, Name, UPN, Password and Start are mandatory in the API when creating new user accounts.
 - The MustChangePassword Property is always a mandatory field for updating an account. You must specify "T" or "F"
 - The MustChangePassword Property is turned off when a update event is triggerd, it's not possible to get the current state.
