@@ -340,6 +340,7 @@ try {
     else {
         Throw "Employee not found"
     }
+    #Ending optional search for employee salary number
 
     $employee = $caressService.GetEmployeeById($account.EmployeeId) # throws error if employee not found
 
