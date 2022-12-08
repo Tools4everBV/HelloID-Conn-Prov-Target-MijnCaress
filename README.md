@@ -47,7 +47,7 @@ The following settings are required to connect to the API.
 | WsdlFileSoap     | The location of the wsdl file with the web service interface specification. This location needs to be accessible from the computer running the helloid provisioning agent. Copy the .wsdl file available in this git repo to the specified location.| Yes         |
 | UsernameSoap     | The UserName to connects to mijnCaress  | Yes         |
 | PasswordSoap     | The Password to connect to mijnCaress | Yes         |
-| Encryptionkey      | A long string representing the Encryption key used for encrypting the passwords of the mijnCaress user accounts, when they are sent to the mijnCaress API.                 | Yes         |
+| Encryptionkey      | This Key is a supplier Key. A long string representing the Encryption key used for encrypting the passwords of the mijnCaress user accounts.              | Yes         |
 | IsDebug      | When toggled, debug logging will be displayed      | Yes         |
 | UserLocationFile      | A location that is accessible by the directory agent. To create a lookup file with the existing users and authorizations in mijnCaress Example: C:\Workingdir (These files are created in the resource script)     | Yes         |
 | DisciplineMappingFile  | The location of the mapping file between Function Title and mijnCaress discipline *C:\mijnCaress\DisciplineMapping.csv*.  An Example of a mapping file can be found in the assets folder.         | Yes         |
