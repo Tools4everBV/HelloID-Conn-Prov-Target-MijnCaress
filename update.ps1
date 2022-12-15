@@ -54,38 +54,32 @@ function GenerateName {
         $PartnerNamePrefix = $person.Name.FamilyNamePartnerPrefix
         $PartnerName = $person.Name.FamilyNamePartner 
         $convention = $person.Name.Convention
-        $Name = ""       
+        $Name = $person.Name.NickName
 
         switch ($convention) {
             "B" {
-                $Name += $FamilyName
-                $Name += ", " + $initials
                 $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName
             }
             "P" {
-                $Name += $PartnerName
-                $Name += ", " + $initials
                 $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+                $Name += " " + $PartnerName
             }
             "BP" {
-                $Name += $FamilyName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName + " - "
                 $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { $PartnerNamePrefix + " " }
                 $Name += $PartnerName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
             }
             "PB" {
-                $Name += $PartnerName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+                $Name += " " + $PartnerName + " - "
                 $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
                 $Name += $FamilyName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
-                
             }
             Default {
-                $Name += $FamilyName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }           
+               $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName
             }
         }      
         return $Name
@@ -213,7 +207,7 @@ try {
 
     Write-Verbose 'search for correct Discipline Name'
     $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' -encoding UTF8  #-Header: FunctionName, FunctionCode, DisciplineName
-    $DisciplineName = ($DisciplineMapping | Where-Object { $_.Functiecode -eq $DisciplineNameLookUpValue }).DisciplineName
+    $DisciplineName = ($DisciplineMapping | Where-Object { $_.FunctionCode -eq $DisciplineNameLookUpValue }).DisciplineName
 
     write-verbose "$($config.DisciplineMappingFile) contains $(($DisciplineMapping | measure-object).count) rows" 
 

@@ -124,5 +124,15 @@
       "description": "When toggled, debug logging will be displayed",
       "required": false
     }
+  },
+  {
+    "key": "SearchEmployeeOnSalaryNr",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Search employee on salary employee nr",
+      "description": "When toggled, salary employee nr will be used to search employees",
+      "required": false
+    }
   }
 ]

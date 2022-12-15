@@ -93,38 +93,32 @@ function GenerateName {
         $PartnerNamePrefix = $person.Name.FamilyNamePartnerPrefix
         $PartnerName = $person.Name.FamilyNamePartner 
         $convention = $person.Name.Convention
-        $Name = ""       
+        $Name = $person.Name.NickName
 
         switch ($convention) {
             "B" {
-                $Name += $FamilyName
-                $Name += ", " + $initials
                 $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName
             }
             "P" {
-                $Name += $PartnerName
-                $Name += ", " + $initials
                 $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+                $Name += " " + $PartnerName
             }
             "BP" {
-                $Name += $FamilyName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName + " - "
                 $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { $PartnerNamePrefix + " " }
                 $Name += $PartnerName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
             }
             "PB" {
-                $Name += $PartnerName + " - "
+                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
+                $Name += " " + $PartnerName + " - "
                 $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { $FamilyNamePrefix + " " }
                 $Name += $FamilyName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($PartnerNamePrefix))) { " " + $PartnerNamePrefix }
-                
             }
             Default {
-                $Name += $FamilyName
-                $Name += ", " + $initials
-                $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }           
+               $Name += if (-NOT([string]::IsNullOrEmpty($FamilyNamePrefix))) { " " + $FamilyNamePrefix }
+                $Name += " " + $FamilyName
             }
         }      
         return $Name
@@ -223,7 +217,7 @@ try {
         Username        = $p.Accounts.MicrosoftActiveDirectory.samAccountName
         UPN             = $p.Accounts.MicrosoftActiveDirectory.UserPrincipalName
         Start           = format-date -date $p.PrimaryContract.StartDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
-        End             = format-date -date $p.PrimaryContract.EndDate -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
+        End             = format-date -date $p.PrimaryContract.EndDate  -InputFormat 'yyyy-MM-ddThh:mm:ssZ' -OutputFormat "yyyy-MM-dd"
         Status          = 'N' # "A" = Active, "N" = Not active
         EmployeeId      = $p.ExternalId # $p.ExternalId for lookup.   # will be resolved to sysID of the employee
         DisciplineSysId = $Null  # Additional Mapping file is needed between function name en MijnCaress disiplineName
@@ -268,7 +262,7 @@ try {
 
     Write-Verbose 'search for correct Discipline Name'
     $DisciplineMapping = Import-Csv $config.DisciplineMappingFile -Delimiter ';' -encoding UTF8  #-Header: FunctionName, FunctionCode, DisciplineName
-    $DisciplineName = ($DisciplineMapping | Where-Object { $_.Functiecode -eq $DisciplineNameLookUpValue }).DisciplineName
+    $DisciplineName = ($DisciplineMapping | Where-Object { $_.FunctionCode -eq $DisciplineNameLookUpValue }).DisciplineName
 
     write-verbose "$($config.DisciplineMappingFile) contains $(($DisciplineMapping | measure-object).count) rows" 
 
@@ -301,44 +295,47 @@ try {
     write-verbose "$($config.UserLocationFile)\users.csv contains $(($userList | measure-object).count) rows" 
 
     #search for employee salary number first through REST-API (OPTIONAL)
-    Write-Verbose "Setup connection with mijnCaress REST-API"
-    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($config.certificatePath, $config.CertificatePassword) 
-    $password = ConvertTo-SecureString -String "$($config.passwordAPI)" -AsPlainText -Force 
-    $Credentials = New-Object System.Management.Automation.PSCredential ($config.usernameAPI, $password)
+    if($($config.SearchEmployeeOnSalaryNr))
+    {
+        Write-Verbose "Setup connection with mijnCaress REST-API"
+        $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($config.certificatePath, $config.CertificatePassword) 
+        $password = ConvertTo-SecureString -String "$($config.passwordAPI)" -AsPlainText -Force 
+        $Credentials = New-Object System.Management.Automation.PSCredential ($config.usernameAPI, $password)
 
-    try {
-        $employee = (Invoke-restmethod -uri "$($config.urlBase)/employees?salaryEmployeeNr=$($account.EmployeeId)&checkEmployeeOrganizationalUnitAuthorization=false&endDate=2200-01-01" -Certificate $certificate -Credential $Credentials).employees
-        $employee = $employee | sort-object identifier -unique
+        try {
+            $employee = (Invoke-restmethod -uri "$($config.urlBase)/employees?salaryEmployeeNr=$($account.EmployeeId)&checkEmployeeOrganizationalUnitAuthorization=false&endDate=2200-01-01" -Certificate $certificate -Credential $Credentials).employees
+            $employee = $employee | sort-object identifier -unique
 
-        if (($employee | measure-object).count -gt 1) {
-            Throw "multiple ($(($employee | measure-object).count)) employees with salaryEmployeeNr [$($account.EmployeeId)] found"
+            if (($employee | measure-object).count -gt 1) {
+                Throw "multiple ($(($employee | measure-object).count)) employees with salaryEmployeeNr [$($account.EmployeeId)] found"
+            }
         }
-    }
-    catch {
-        $errResponse = $_
-        if ($errResponse.ErrorDetails.Message) {
-            try {
-                $errorMessage = ($errResponse.ErrorDetails.Message | convertfrom-json).ErrorMessage
-            }
-            catch {
-                $errorMessage = $errResponse
+        catch {
+            $errResponse = $_
+            if ($errResponse.ErrorDetails.Message) {
+                try {
+                    $errorMessage = ($errResponse.ErrorDetails.Message | convertfrom-json).ErrorMessage
+                }
+                catch {
+                    $errorMessage = $errResponse
 
+                }
+                finally {
+                    Throw "Failed to find employee through rest API - $errorMessage"
+                }
             }
-            finally {
-                Throw "Failed to find employee through rest API - $errorMessage"
-            }
+            else {
+                Throw "Failed to find employee through rest API - $($errResponse)"
+            }     
+        }
+
+        if ($employee) {
+            Write-Verbose "Found employee Name: [$($employee.longName)] Id: [$($employee.Identifier)]"
+            $account.EmployeeId = $employee.identifier
         }
         else {
-            Throw "Failed to find employee through rest API - $($errResponse)"
-        }     
-    }
-
-    if ($employee) {
-        Write-Verbose "Found employee Name: [$($employee.longName)] Id: [$($employee.Identifier)]"
-        $account.EmployeeId = $employee.identifier
-    }
-    else {
-        Throw "Employee not found"
+            Throw "Employee not found"
+        }
     }
     #Ending optional search for employee salary number
 
