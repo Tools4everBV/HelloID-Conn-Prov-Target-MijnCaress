@@ -29,11 +29,11 @@ if ($p.PrimaryContract.Context.InConditions -eq $true) {
 else {
     $contracts = $p.contracts | sort-object externalID
     write-verbose  "PrimaryContract not incondition, using first contract in list"
-
+    
     foreach ($contract in $contracts) {
         if ([boolean]$contract.Context.InConditions -eq $true) {
             write-verbose  "Use contract $($contract.externalID) with title $($contract.Title.code)"
-
+            
             $DisciplineNameLookUpValue = $contract.Title.code
             $DisciplineNameLookUpValueDetail = $contract.Title.name
             break
@@ -356,6 +356,9 @@ try {
     #re-use the current linked user's username
     if (($useraccountsFoundOnEmployeeID | measure-object).Count -eq 1) {
         $account.Username = $useraccountsFoundOnEmployeeID.username
+    }
+    elseif (($useraccountsFoundOnEmployeeID | measure-object).Count -gt 1) {
+        Throw "Found multiple user accounts [$($useraccountsFoundOnEmployeeID.Username -join ", ")]"
     }
 
     $useraccountsOndifferentEmployeeID = $userList.Where({ $_.username -eq $account.Username -and $_.EmployeeSysId -ne $employee.SysId })
